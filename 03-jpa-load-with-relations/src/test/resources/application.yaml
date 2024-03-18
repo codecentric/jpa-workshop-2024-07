@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:h2:~/jpa-workshop-h2/03-jpa-load;AUTO_SERVER=TRUE
+    username: db
+    password: db
+    driverClassName: org.h2.Driver
+  sql:
+    init:
+      mode: always
+  jpa:
+    #    database-platform: org.hibernate.dialect.H2Dialect
+    generate-ddl: true
+    hibernate:
+      ddl-auto: create
+logging:
+  level:
+    root: TRACE
+    org: WARN
+    com: WARN
+    de: WARN
+    org.hibernate: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.type.descriptor.sql: TRACE
+  threshold:
+    console: TRACE
