@@ -1,4 +1,4 @@
-package de.codecentric.workshops.jpaworkshop.jpa.lazyloading;
+package de.codecentric.workshops.jpaworkshop.jpa.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -163,7 +163,7 @@ class MessageRepositoryTest {
 	@Test
 	void lazyLoadingAfterDetaching() {
 		final Optional<Message> loaded = underTest.findById(msg1.getId());
-		assertThat(loaded).isPresent();
+		Assertions.assertThat(loaded).isPresent();
 		final Message loadedMessage = loaded.get();
 		final User sender = loadedMessage.getSender();
 		assertThatThrownBy(sender::getName).isInstanceOf(LazyInitializationException.class);
@@ -173,16 +173,35 @@ class MessageRepositoryTest {
 	@Transactional
 	void lazyLoadingWhileInSession() {
 		final Optional<Message> loaded = underTest.findById(msg1.getId());
-		assertThat(loaded).isPresent();
+		Assertions.assertThat(loaded).isPresent();
 		final Message loadedMessage = loaded.get();
 		final User sender = loadedMessage.getSender();
 		assertThat(sender.getName()).isNotEmpty();
 	}
 
 	@Test
-	void joinFetch() {
-		final Message loaded = underTest.findWithEntityGraph(msg1.getId());
-		final User sender = loaded.getSender();
-		assertThat(sender.getName()).isNotEmpty();
+	void detachedObjectsDoNotGetSaved() {
+		final Message message = underTest.findByIdWithTransaction(msg1.getId());
+		message.setContent("new content");
+		final Message message2 = underTest.findByIdWithTransaction(msg1.getId());
+		assertThat(message2.getContent()).isEqualTo("content one");
+	}
+
+	@Test
+	@Transactional
+	void attachedObjectsAreCached() {
+		final Message message = underTest.findByIdWithTransaction(msg1.getId());
+		message.setContent("new content");
+		final Message message2 = underTest.findByIdWithTransaction(msg1.getId());
+		assertThat(message2.getContent()).isEqualTo("new content");
+	}
+
+	@Test
+	void detachedObjectsCanBeAttached() {
+		final Message message = underTest.findByIdWithTransaction(msg1.getId());
+		message.setContent("new content");
+		underTest.save(message);
+		final Message message2 = underTest.findByIdWithTransaction(msg1.getId());
+		assertThat(message2.getContent()).isEqualTo("new content");
 	}
 }

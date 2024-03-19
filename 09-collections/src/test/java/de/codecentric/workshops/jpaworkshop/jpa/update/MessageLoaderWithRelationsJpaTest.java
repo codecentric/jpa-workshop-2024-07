@@ -1,19 +1,16 @@
-package de.codecentric.workshops.jpaworkshop.jpa.lazyloading;
+package de.codecentric.workshops.jpaworkshop.jpa.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.transaction.Transactional;
 import org.assertj.core.api.Assertions;
-import org.hibernate.LazyInitializationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,13 +19,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 @SpringBootTest
-class MessageRepositoryTest {
+class MessageLoaderWithRelationsJpaTest {
 	@Autowired
 	JdbcClient jdbcClient;
 	@Autowired
-	EntityManagerFactory emf;
+	MessageLoaderWithRelationsJpa underTest;
 	@Autowired
-	MessageRepository underTest;
+	EntityManagerFactory emf;
+
 	final User user1 = new User("user1", UserLevel.USER, LocalDate.now());
 	final User user2 = new User("user2", UserLevel.MODERATOR, LocalDate.now());
 	private Message msg1;
@@ -37,6 +35,7 @@ class MessageRepositoryTest {
 	private Instant now = Instant.now();
 
 	@BeforeEach
+	@Transactional
 	void resetDb() {
 		final EntityManager entityManager = emf.createEntityManager();
 		entityManager.getTransaction().begin();
@@ -56,25 +55,26 @@ class MessageRepositoryTest {
 
 	@Test
 	void loadsSingleMessage() {
-		final Optional<Message> loadedMessageOption = underTest.findById(msg1.getId());
-		Assertions.assertThat(loadedMessageOption).isPresent();
-		final Message loadedMessage = loadedMessageOption.get();
-		assertThat(loadedMessage.getId()).isEqualTo(msg1.getId());
+		final Message loadedMessage = underTest.loadMessage(msg1.getId());
 		assertThat(loadedMessage.getContent()).isEqualTo("content one");
 	}
 
 	@Test
 	void loadsAllMessages() {
-		final List<Message> messages = underTest.findAll();
+		final List<Message> messages = underTest.loadAllMessages();
 		Assertions.assertThat(messages).hasSize(3);
-		assertThat(messages.get(0).getId()).isEqualTo(msg1.getId());
-		assertThat(messages.get(1).getId()).isEqualTo(msg2.getId());
-		assertThat(messages.get(2).getId()).isEqualTo(msg3.getId());
+		assertThat(messages.get(0).getContent()).isEqualTo("content one");
+		assertThat(messages.get(1).getContent()).isEqualTo("content two");
+		assertThat(messages.get(2).getContent()).isEqualTo("content three");
 	}
 
 	@Test
 	void findsMessageBySender() {
-		final List<Message> actual = underTest.findAllBySender(user1);
+		final User sender = new User();
+		sender.setName("foo");
+		sender.setLevel(UserLevel.USER);
+		sender.setId(user1.getId());
+		final List<Message> actual = underTest.findAllBySender(sender);
 		Assertions.assertThat(actual).hasSize(2);
 		assertThat(actual.get(0).getId()).isEqualTo(msg1.getId());
 		assertThat(actual.get(1).getId()).isEqualTo(msg3.getId());
@@ -82,7 +82,7 @@ class MessageRepositoryTest {
 
 	@Test
 	void findsMessageBySenderId() {
-		final List<Message> actual = underTest.findAllBySenderId(user1.getId());
+		final List<Message> actual = underTest.findAllBySenderIdJPQL(user1.getId());
 		Assertions.assertThat(actual).hasSize(2);
 		assertThat(actual.get(0).getId()).isEqualTo(msg1.getId());
 		assertThat(actual.get(1).getId()).isEqualTo(msg3.getId());
@@ -99,7 +99,11 @@ class MessageRepositoryTest {
 	@Test
 	void findsBySenderIdAndContent() {
 		var msg4 = new Message(user1, "to4", "another three", now);
-		msg4 = underTest.save(msg4);
+		final EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
+		em.persist(msg4);
+		em.getTransaction().commit();
+		em.close();
 		final List<Message> actual = underTest.findAllBySenderIdAndContentContains(user1.getId(), "three");
 		Assertions.assertThat(actual).hasSize(2);
 		assertThat(actual.get(0).getId()).isEqualTo(msg3.getId());
@@ -108,7 +112,7 @@ class MessageRepositoryTest {
 
 	@Test
 	void findsCountBySenderId() {
-		final int actual = underTest.countMessagesBySenderId(user1.getId());
+		final long actual = underTest.countMessagesBySenderId(user1.getId());
 		assertThat(actual).isEqualTo(2);
 	}
 
@@ -116,7 +120,8 @@ class MessageRepositoryTest {
 	void savesMessage() {
 		final Message newMessage = new Message(user1, "to1", "content_new", now);
 		final Message savedMessage = underTest.save(newMessage);
-		assertThat(savedMessage).usingRecursiveComparison().isEqualTo(newMessage);
+		assertThat(savedMessage.getId()).isNotNull();
+		assertThat(savedMessage.getSender().getId()).isEqualTo(user1.getId());
 		assertThat(jdbcClient.sql("SELECT count(*) from messages;").query(int.class).single()).isEqualTo(4);
 		assertThat(jdbcClient.sql("SELECT count(*) from messages where ID=?;")
 			.param(1, savedMessage.getId())
@@ -125,17 +130,16 @@ class MessageRepositoryTest {
 		jdbcClient.sql("SELECT * from messages where ID=?;").param(1, 0).query(rs -> {
 			assertThat(rs.getString("content")).isEqualTo("content_new");
 		});
-
 	}
 
 	@Test
 	void ordersByTimestamp() {
+		final EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
 		new Random().longs(10, 0, 100_000_000)
-			.forEach(timestamp -> underTest.save(new Message(user1,
-				"to",
-				"content",
-				Instant.ofEpochSecond(timestamp)
-			)));
+			.forEach(timestamp -> em.persist(new Message(user1, "to", "content", Instant.ofEpochSecond(timestamp))));
+		em.getTransaction().commit();
+		em.close();
 		final List<Message> actual = underTest.findAllBySenderIdOrderByTimestamp(user1.getId());
 		Assertions.assertThat(actual).hasSize(12); // 2 from above and 10 from here
 		actual.stream().map(Message::getTimestamp).reduce(Instant.EPOCH, (previous, current) -> {
@@ -145,44 +149,33 @@ class MessageRepositoryTest {
 	}
 
 	@Test
-	void ordersByCustomSort() {
+	void ordersByCustomSortWithJPQL() {
+		final EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
 		new Random().longs(10, 0, 100_000_000)
-			.forEach(timestamp -> underTest.save(new Message(user1,
-				"to",
-				"content",
-				Instant.ofEpochSecond(timestamp)
-			)));
-		final List<Message> actual = underTest.findAllBySenderId(user1.getId(), Sort.by("timestamp").reverse());
+			.forEach(timestamp -> em.persist(new Message(user1, "to", "content", Instant.ofEpochSecond(timestamp))));
+		em.getTransaction().commit();
+		em.close();
+		final List<Message> actual = underTest.findAllBySenderIdJPQL(user1.getId(), Sort.by("timestamp").reverse());
 		Assertions.assertThat(actual).hasSize(12); // 2 from above and 10 from here
 		actual.stream().map(Message::getTimestamp).reduce(Instant.MAX, (previous, current) -> {
 			Assertions.assertThat(previous).isAfterOrEqualTo(current);
 			return current;
 		});
 	}
-
 	@Test
-	void lazyLoadingAfterDetaching() {
-		final Optional<Message> loaded = underTest.findById(msg1.getId());
-		assertThat(loaded).isPresent();
-		final Message loadedMessage = loaded.get();
-		final User sender = loadedMessage.getSender();
-		assertThatThrownBy(sender::getName).isInstanceOf(LazyInitializationException.class);
-	}
-
-	@Test
-	@Transactional
-	void lazyLoadingWhileInSession() {
-		final Optional<Message> loaded = underTest.findById(msg1.getId());
-		assertThat(loaded).isPresent();
-		final Message loadedMessage = loaded.get();
-		final User sender = loadedMessage.getSender();
-		assertThat(sender.getName()).isNotEmpty();
-	}
-
-	@Test
-	void joinFetch() {
-		final Message loaded = underTest.findWithEntityGraph(msg1.getId());
-		final User sender = loaded.getSender();
-		assertThat(sender.getName()).isNotEmpty();
+	void ordersByCustomSortWithCriteria() {
+		final EntityManager em = emf.createEntityManager();
+		em.getTransaction().begin();
+		new Random().longs(10, 0, 100_000_000)
+			.forEach(timestamp -> em.persist(new Message(user1, "to", "content", Instant.ofEpochSecond(timestamp))));
+		em.getTransaction().commit();
+		em.close();
+		final List<Message> actual = underTest.findAllBySenderIdCriteria(user1.getId(), Sort.by("timestamp").reverse());
+		Assertions.assertThat(actual).hasSize(12); // 2 from above and 10 from here
+		actual.stream().map(Message::getTimestamp).reduce(Instant.MAX, (previous, current) -> {
+			Assertions.assertThat(previous).isAfterOrEqualTo(current);
+			return current;
+		});
 	}
 }

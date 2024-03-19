@@ -1,16 +1,18 @@
-package de.codecentric.workshops.jpaworkshop.jpa.lazyloading;
+package de.codecentric.workshops.jpaworkshop.jpa.update;
 
 import java.util.List;
 
+import jakarta.annotation.Nonnull;
 import jakarta.transaction.Transactional;
 import jakarta.transaction.Transactional.TxType;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
-	Message findById(long messageId);
+	@Transactional(TxType.REQUIRED)
+	@Query("SELECT m FROM Message m WHERE m.id = :messageId")
+	Message findByIdWithTransaction(long messageId);
 
 	List<Message> findAllBySender(User sender);
 
@@ -26,9 +28,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
 	int countMessagesBySenderId(long senderId);
 
-	@EntityGraph(attributePaths = "sender")
-	@Query("SELECT m FROM Message m WHERE m.id = :messageId")
-	@Transactional(TxType.REQUIRES_NEW)
-	Message findWithEntityGraph(long messageId);
-
+	@Transactional(TxType.REQUIRED)
+	@Nonnull Message saveAndFlush(Message m);
 }

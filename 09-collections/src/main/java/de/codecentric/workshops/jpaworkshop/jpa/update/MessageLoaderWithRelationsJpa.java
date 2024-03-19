@@ -1,4 +1,4 @@
-package de.codecentric.workshops.jpaworkshop.jpa.lazyloading;
+package de.codecentric.workshops.jpaworkshop.jpa.update;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,7 +10,6 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
-import jakarta.transaction.Transactional.TxType;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -63,8 +62,10 @@ public class MessageLoaderWithRelationsJpa {
 
 	@Transactional
 	public Message save(Message newMessage) {
-		entityManager.persist(newMessage);
-		return newMessage;
+		final Message merged = entityManager.merge(newMessage);
+		return entityManager.createQuery("SELECT m FROM Message m JOIN FETCH m.sender WHERE m.id = :id", Message.class)
+			.setParameter("id", merged.getId())
+			.getSingleResult();
 	}
 
 	public List<Message> findAllBySenderIdOrderByTimestamp(Long senderId) {
@@ -92,25 +93,18 @@ public class MessageLoaderWithRelationsJpa {
 	public List<Message> findAllBySenderIdCriteria(Long senderId, Sort sort) {
 		final CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 		final CriteriaQuery<Message> cq = cb.createQuery(Message.class);
-		Root<Message> m = cq.from(Message.class);
-		final Join<Message, User> sender = m.join("sender", JoinType.LEFT);
-		cq.select(m).where(cb.equal(sender.get("id"), senderId));
+		Root<Message> fromMessage = cq.from(Message.class);
+		final Join<Message, User> sender = fromMessage.join("sender", JoinType.LEFT);
+		cq.select(fromMessage).where(cb.equal(sender.get("id"), senderId));
 		if (sort.isSorted()) {
 			cq.orderBy(sort.stream().map(order -> {
 				if (order.isAscending()) {
-					return cb.asc(m.get(order.getProperty()));
+					return cb.asc(fromMessage.get(order.getProperty()));
 				} else {
-					return cb.desc(m.get(order.getProperty()));
+					return cb.desc(fromMessage.get(order.getProperty()));
 				}
 			}).toList());
 		}
 		return entityManager.createQuery(cq).getResultList();
-	}
-
-	@Transactional(TxType.REQUIRES_NEW)
-	public Message findWithFetch(Long id) {
-		return entityManager.createQuery("SELECT m FROM Message m JOIN FETCH m.sender WHERE m.id = :id", Message.class)
-			.setParameter("id", id)
-			.getSingleResult();
 	}
 }
