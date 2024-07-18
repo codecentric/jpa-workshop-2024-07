@@ -17,8 +17,13 @@ spring:
 
 logging:
   level:
-    org.springframework: WARN
+    root: TRACE
+    org: WARN
+    com: WARN
+    de: WARN
+    org.hibernate: INFO
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.type.descriptor.sql: TRACE
   threshold:
     console: TRACE

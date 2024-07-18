@@ -117,7 +117,6 @@ class MessageLoaderWithRelationsJpaTest {
 	}
 
 	@Test
-	@Disabled("TODO")
 	void savesMessage() {
 		final Message newMessage = new Message(user1, "to1", "content_new");
 		newMessage.setId(1005L);

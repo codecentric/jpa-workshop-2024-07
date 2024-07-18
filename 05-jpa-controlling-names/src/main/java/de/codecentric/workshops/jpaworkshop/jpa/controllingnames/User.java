@@ -4,12 +4,16 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name= "\"user\"")
 public class User {
 	@Id
 	@Column(name = "user_id")
+	@GeneratedValue(generator = "myGenerator")
 	private Long id;
 	private String name;
 	@Enumerated(EnumType.STRING)
