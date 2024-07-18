@@ -26,7 +26,6 @@ class MessageLoaderWithRelationsJdbcClientTest {
 	}
 
 	@Test
-	@Disabled("TODO")
 	void loadsSingleMessage() {
 		client.sql("INSERT INTO users VALUES (42, 'user1')").update();
 		client.sql("INSERT INTO messages VALUES (1, 42, 'to1', 'content1')").update();
@@ -36,7 +35,6 @@ class MessageLoaderWithRelationsJdbcClientTest {
 	}
 
 	@Test
-	@Disabled("TODO")
 	void loadsAllMessages() {
 		client.sql("INSERT INTO users VALUES (42, 'user1')").update();
 		client.sql("INSERT INTO users VALUES (43, 'user2')").update();

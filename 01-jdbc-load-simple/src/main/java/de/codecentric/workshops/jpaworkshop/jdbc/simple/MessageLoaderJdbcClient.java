@@ -2,7 +2,6 @@ package de.codecentric.workshops.jpaworkshop.jdbc.simple;
 
 import java.util.List;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
@@ -15,10 +14,10 @@ public class MessageLoaderJdbcClient {
 	}
 
 	public Message loadMessage(long id) {
-		throw new NotImplementedException("TODO");
+		return jdbcClient.sql("select * from messages where message_id = ?").param(id).query(Message.class).single();
 	}
 
 	public List<Message> loadAllMessages() {
-		throw new NotImplementedException("TODO");
+		return jdbcClient.sql("select * from messages").query(Message.class).list();
 	}
 }

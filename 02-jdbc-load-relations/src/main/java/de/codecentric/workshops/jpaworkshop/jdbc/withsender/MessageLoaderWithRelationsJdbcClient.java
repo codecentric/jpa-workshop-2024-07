@@ -2,7 +2,6 @@ package de.codecentric.workshops.jpaworkshop.jdbc.withsender;
 
 import java.util.List;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -22,10 +21,16 @@ public class MessageLoaderWithRelationsJdbcClient {
 	}
 
 	public Message loadMessage(long id) {
-		throw new NotImplementedException("TODO");
+		return jdbcClient
+			.sql("select * from messages join users on sender_id = user_id where message_id = ?")
+			.param(id)
+			.query(MESSAGE_ROW_MAPPER)
+			.single();
 	}
 
 	public List<Message> loadAllMessages() {
-		throw new NotImplementedException("TODO");
+		return jdbcClient.sql("select * from messages join users on sender_id = user_id")
+			.query(MESSAGE_ROW_MAPPER)
+			.list();
 	}
 }
