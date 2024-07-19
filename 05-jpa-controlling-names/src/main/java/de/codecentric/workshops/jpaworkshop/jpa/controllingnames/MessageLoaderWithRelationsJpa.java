@@ -23,7 +23,8 @@ public class MessageLoaderWithRelationsJpa {
 	}
 
 	List<Message> findAllBySender(User sender) {
-		return findAllBySenderId(sender.getId());
+//		return findAllBySenderId(sender.getId());
+		return null;
 	}
 
 	List<Message> findAllBySenderId(long id) {

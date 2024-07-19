@@ -9,11 +9,11 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
 	List<Message> findAllBySender(User sender);
 
-	List<Message> findAllBySenderId(long id);
+	List<Message> findAllBySenderPk(UserPK id);
 
-	List<Message> findAllBySenderName(String senderName);
+//	List<Message> findAllBySenderName(String senderName);
 
-	List<Message> findAllBySenderIdAndContentContains(long senderId, String content);
+//	List<Message> findAllBySenderIdAndContentContains(long senderId, String content);
 
-	int countMessagesBySenderId(long senderId);
+//	int countMessagesBySenderId(long senderId);
 }
