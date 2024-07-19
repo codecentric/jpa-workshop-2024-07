@@ -32,6 +32,7 @@
         <module>06-datatypes</module>
         <module>07-lazy-loading</module>
         <module>08-update</module>
+        <module>09-collections</module>
     </modules>
 
     <dependencies>
