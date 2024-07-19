@@ -177,4 +177,11 @@ class MessageLoaderWithRelationsJpaTest {
 			return current;
 		});
 	}
+
+	@Test
+	void joinFetch() {
+		final Message loaded = underTest.findWithFetch(msg1.getId());
+		final User sender = loaded.getSender();
+		assertThat(sender.getName()).isNotEmpty();
+	}
 }

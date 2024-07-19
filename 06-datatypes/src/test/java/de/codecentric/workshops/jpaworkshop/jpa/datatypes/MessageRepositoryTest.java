@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 @SpringBootTest
@@ -39,11 +41,11 @@ class MessageRepositoryTest {
 		entityManager.createQuery("DELETE from User").executeUpdate();
 		entityManager.persist(user1);
 		entityManager.persist(user2);
-		msg1 = new Message(user1, "to1", "content one");
+		msg1 = new Message(user1, "to1", "content one", Instant.now());
 		entityManager.persist(msg1);
-		msg2 = new Message(user2, "to2", "content two");
+		msg2 = new Message(user2, "to2", "content two", Instant.now());
 		entityManager.persist(msg2);
-		msg3 = new Message(user1, "to3", "content three");
+		msg3 = new Message(user1, "to3", "content three", Instant.now());
 		entityManager.persist(msg3);
 		entityManager.getTransaction().commit();
 		entityManager.close();
@@ -93,7 +95,7 @@ class MessageRepositoryTest {
 
 	@Test
 	void findsBySenderIdAndContent() {
-		var msg4 = new Message(user1, "to4", "another three");
+		var msg4 = new Message(user1, "to4", "another three", Instant.now());
 		msg4 = underTest.save(msg4);
 		final List<Message> actual = underTest.findAllBySenderIdAndContentContains(user1.getId(), "three");
 		assertThat(actual).hasSize(2);
@@ -109,7 +111,7 @@ class MessageRepositoryTest {
 
 	@Test
 	void savesMessage() {
-		final Message newMessage = new Message(user1, "to1", "content_new");
+		final Message newMessage = new Message(user1, "to1", "content_new", Instant.now());
 		final Message savedMessage = underTest.save(newMessage);
 		assertThat(savedMessage).usingRecursiveComparison().isEqualTo(newMessage);
 		assertThat(jdbcClient.sql("SELECT count(*) from messages;").query(int.class).single()).isEqualTo(4);
@@ -124,34 +126,34 @@ class MessageRepositoryTest {
 	}
 
 	@Test
-	@Disabled("TODO")
 	void ordersByTimestamp() {
-//		new Random().longs(10, 0, 100_000_000)
-//			.forEach(timestamp -> underTest.save(new Message(user1,
-//				"to",
-//				"content"
-//			)));
-//		final List<Message> actual = underTest.findAllBySenderIdOrderByTimestamp(user1.getId());
-//		assertThat(actual).hasSize(12); // 2 from above and 10 from here
-//		actual.stream().map(Message::getTimestamp).reduce(Instant.EPOCH, (previous, current) -> {
-//			assertThat(previous).isBeforeOrEqualTo(current);
-//			return current;
-//		});
+		new Random().longs(10, 0, 100_000_000)
+			.forEach(timestamp -> underTest.save(new Message(user1,
+				"to",
+				"content",
+				Instant.ofEpochSecond(timestamp)
+			)));
+		final List<Message> actual = underTest.findAllBySenderIdOrderByTimestamp(user1.getId());
+		assertThat(actual).hasSize(12); // 2 from above and 10 from here
+		actual.stream().map(Message::getTimestamp).reduce(Instant.EPOCH, (previous, current) -> {
+			assertThat(previous).isBeforeOrEqualTo(current);
+			return current;
+		});
 	}
 
 	@Test
-	@Disabled
 	void ordersByCustomSort() {
-//		new Random().longs(10, 0, 100_000_000)
-//			.forEach(timestamp -> underTest.save(new Message(user1,
-//				"to",
-//				"content"
-//			)));
-//		final List<Message> actual = underTest.findAllBySenderId(user1.getId(), Sort.by("timestamp").reverse());
-//		assertThat(actual).hasSize(12); // 2 from above and 10 from here
-//		actual.stream().map(Message::getTimestamp).reduce(Instant.MAX, (previous, current) -> {
-//			assertThat(previous).isAfterOrEqualTo(current);
-//			return current;
-//		});
+		new Random().longs(10, 0, 100_000_000)
+			.forEach(timestamp -> underTest.save(new Message(user1,
+				"to",
+				"content",
+				Instant.ofEpochSecond(timestamp)
+			)));
+		final List<Message> actual = underTest.findAllBySenderId(user1.getId(), Sort.by("timestamp").reverse());
+		assertThat(actual).hasSize(12); // 2 from above and 10 from here
+		actual.stream().map(Message::getTimestamp).reduce(Instant.MAX, (previous, current) -> {
+			assertThat(previous).isAfterOrEqualTo(current);
+			return current;
+		});
 	}
 }

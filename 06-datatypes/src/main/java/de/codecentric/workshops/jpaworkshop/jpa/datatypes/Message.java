@@ -8,6 +8,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "messages")
 public class Message {
@@ -19,14 +21,16 @@ public class Message {
 	private User sender;
 	private String receiver;
 	private String content;
+	private Instant timestamp;
 
 	public Message() {
 	}
 
-	public Message(User sender, String receiver, String content) {
+	public Message(User sender, String receiver, String content, Instant timestamp) {
 		this.sender = sender;
 		this.receiver = receiver;
 		this.content = content;
+		this.timestamp = timestamp;
 	}
 
 	public Long getId() {
@@ -59,5 +63,13 @@ public class Message {
 
 	public void setContent(String content) {
 		this.content = content;
+	}
+
+	public Instant getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(Instant timestamp) {
+		this.timestamp = timestamp;
 	}
 }

@@ -1,6 +1,7 @@
 package de.codecentric.workshops.jpaworkshop.jpa.lazyloading;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,6 +13,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.transaction.Transactional;
 import org.assertj.core.api.Assertions;
+import org.hibernate.LazyInitializationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -160,13 +162,38 @@ class MessageRepositoryTest {
 	}
 
 	@Test
-	@Disabled("TODO")
 	void lazyLoadingAfterDetaching() {
+		final var loaded = underTest.findById(msg1.getId());
+		assertThat(loaded).isPresent();
+
+		final var loadedMessage = loaded.get();
+
+		final var sender = loadedMessage.getSender();
+
+		assertThat(sender).isNotNull();
+
+		assertThatThrownBy(() -> sender.getName()).isInstanceOf(LazyInitializationException.class);
 	}
 
 	@Test
 	@Transactional
-	@Disabled("TODO")
 	void lazyLoadingWhileInSession() {
+		final var loaded = underTest.findById(msg1.getId());
+		assertThat(loaded).isPresent();
+
+		final var loadedMessage = loaded.get();
+
+		final var sender = loadedMessage.getSender();
+
+		assertThat(sender).isNotNull();
+
+		assertThat(sender.getName()).isNotEmpty();
+	}
+
+	@Test
+	void joinFetch() {
+		final Message loaded = underTest.findWithEntityGraph(msg1.getId());
+		final User sender = loaded.getSender();
+		assertThat(sender.getName()).isNotEmpty();
 	}
 }

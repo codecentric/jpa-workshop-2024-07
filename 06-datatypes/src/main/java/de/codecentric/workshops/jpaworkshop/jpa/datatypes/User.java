@@ -1,6 +1,7 @@
 package de.codecentric.workshops.jpaworkshop.jpa.datatypes;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -18,6 +19,9 @@ public class User {
 	private String name;
 	@Enumerated(EnumType.STRING)
 	private UserLevel level;
+
+	@Embedded
+	private Address address;
 
 	public User() {
 	}
@@ -49,5 +53,13 @@ public class User {
 
 	public void setLevel(UserLevel level) {
 		this.level = level;
+	}
+
+	public Address getAddress() {
+		return address;
+	}
+
+	public void setAddress(Address address) {
+		this.address = address;
 	}
 }

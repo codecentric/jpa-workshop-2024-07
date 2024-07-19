@@ -10,6 +10,7 @@ import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
+import jakarta.transaction.Transactional.TxType;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
@@ -104,5 +105,16 @@ public class MessageLoaderWithRelationsJpa {
 			}).toList());
 		}
 		return entityManager.createQuery(cq).getResultList();
+	}
+
+	@Transactional(TxType.REQUIRES_NEW)
+	public Message findWithFetch(final Long id) {
+		final var message = entityManager.createQuery("""
+			SELECT m 
+			FROM Message m
+				JOIN FETCH m.sender 
+			WHERE m.id = :id
+			""", Message.class).setParameter("id", id).getSingleResult();
+		return message;
 	}
 }

@@ -3,9 +3,10 @@ package de.codecentric.workshops.jpaworkshop.jpa.datatypes;
 import java.util.List;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.transaction.Transactional;
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -62,14 +63,49 @@ public class MessageLoaderWithRelationsJpa {
 	}
 
 	public List<Message> findAllBySenderIdOrderByTimestamp(Long senderId) {
-		throw new NotImplementedException("TODO");
+		return entityManager.createQuery("""
+			                  SELECT m FROM Message m 
+			                  WHERE sender.id = :id
+							  ORDER BY m.timestamp
+			""", Message.class).setParameter("id", senderId).getResultList();
 	}
 
 	public List<Message> findAllBySenderIdJPQL(Long senderId, Sort sort) {
-		throw new NotImplementedException("TODO");
+		final var queryBuilder = new StringBuilder("SELECT m FROM Message m WHERE sender.id = :id ");
+		if (sort.isSorted()) {
+			queryBuilder.append(" ORDER BY ");
+			var needComma = false;
+			for (Order order : sort) {
+				if (needComma) {
+					queryBuilder.append(", ");
+				}
+				// need to make sure "property" is safe and not user-controlled
+				queryBuilder.append(order.getProperty()).append(" ").append(order.getDirection()).append(" ");
+				needComma = true;
+			}
+		}
+		return entityManager.createQuery(queryBuilder.toString(), Message.class)
+			.setParameter("id", senderId)
+			.getResultList();
 	}
 
 	public List<Message> findAllBySenderIdCriteria(Long senderId, Sort sort) {
-		throw new NotImplementedException("TODO");
+		final var cb = entityManager.getCriteriaBuilder();
+		final var cq = cb.createQuery(Message.class);
+
+		var m = cq.from(Message.class);
+		var sender = m.join("sender", JoinType.LEFT);
+
+		cq.select(m).where(cb.equal(sender.get("id"), senderId));
+
+		if (sort.isSorted()) {
+			cq.orderBy(sort.stream()
+				.map(order -> order.isAscending()
+							  ? cb.asc(m.get(order.getProperty()))
+							  : cb.desc(m.get(order.getProperty())))
+				.toList());
+		}
+
+		return entityManager.createQuery(cq).getResultList();
 	}
 }

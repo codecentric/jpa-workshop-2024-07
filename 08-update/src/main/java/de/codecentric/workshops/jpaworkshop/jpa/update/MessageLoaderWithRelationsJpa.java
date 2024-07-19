@@ -105,6 +105,7 @@ public class MessageLoaderWithRelationsJpa {
 				}
 			}).toList());
 		}
+
 		return entityManager.createQuery(cq).getResultList();
 	}
 }
